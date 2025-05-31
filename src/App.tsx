@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import ReactMarkdown from 'react-markdown'
 import './App.css'
 
 interface StageMessage {
@@ -15,7 +16,13 @@ interface ErrorMessage {
   timestamp: string
 }
 
-type AnalysisMessage = StageMessage | ErrorMessage
+interface CompleteMessage {
+  type: 'complete'
+  message: string
+  data: string
+}
+
+type AnalysisMessage = StageMessage | ErrorMessage | CompleteMessage
 
 function App() {
   const [activeTab, setActiveTab] = useState<'trace' | 'simulate'>('trace')
@@ -24,6 +31,7 @@ function App() {
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected')
   const [currentStage, setCurrentStage] = useState<string>('')
   const [analysisError, setAnalysisError] = useState<string>('')
+  const [analysisComplete, setAnalysisComplete] = useState<string>('')
   const [contractAddress, setContractAddress] = useState<string>('0x1111111254EEB25477B68fb85Ed929f73A960582')
   const [fromAddress, setFromAddress] = useState<string>('0x4ac3dC4F8986d77D3d589DAa074f040b701D752a')
   const [value, setValue] = useState<string>('0x0')
@@ -32,6 +40,7 @@ function App() {
   const [simulationConnectionStatus, setSimulationConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected')
   const [currentSimulationStage, setCurrentSimulationStage] = useState<string>('')
   const [simulationError, setSimulationError] = useState<string>('')
+  const [simulationComplete, setSimulationComplete] = useState<string>('')
   const wsRef = useRef<WebSocket | null>(null)
   const simulationWsRef = useRef<WebSocket | null>(null)
 
@@ -42,6 +51,7 @@ function App() {
     setConnectionStatus('connecting')
     setCurrentStage('')
     setAnalysisError('')
+    setAnalysisComplete('')
 
     // Create WebSocket connection
     const ws = new WebSocket('ws://127.0.0.1:8765')
@@ -73,6 +83,10 @@ function App() {
           setAnalysisError(`Error in ${data.script}: Script failed with code ${data.return_code}`)
           setCurrentStage('')
           setIsAnalyzing(false) // Stop the analysis on error
+        } else if (data.type === 'complete') {
+          setAnalysisComplete(data.data)
+          setCurrentStage('')
+          setIsAnalyzing(false) // Analysis is complete
         }
       } catch {
         console.log('Received raw message:', event.data)
@@ -126,6 +140,7 @@ function App() {
     setSimulationConnectionStatus('connecting')
     setCurrentSimulationStage('')
     setSimulationError('')
+    setSimulationComplete('')
 
     // Create WebSocket connection
     const ws = new WebSocket('ws://127.0.0.1:8765')
@@ -160,6 +175,10 @@ function App() {
           setSimulationError(`Error in ${data.script}: Script failed with code ${data.return_code}`)
           setCurrentSimulationStage('')
           setIsSimulating(false) // Stop the simulation on error
+        } else if (data.type === 'complete') {
+          setSimulationComplete(data.data)
+          setCurrentSimulationStage('')
+          setIsSimulating(false) // Simulation is complete
         }
       } catch {
         console.log('Received raw simulation message:', event.data)
@@ -220,13 +239,13 @@ function App() {
           className={`tab ${activeTab === 'trace' ? 'active' : ''}`}
           onClick={() => setActiveTab('trace')}
         >
-          Trace a TX
+          Trace
         </button>
         <button 
           className={`tab ${activeTab === 'simulate' ? 'active' : ''}`}
           onClick={() => setActiveTab('simulate')}
         >
-          Simulate a TX
+          Simulate
         </button>
       </nav>
 
@@ -290,6 +309,16 @@ function App() {
               <div className="error-message">
                 <span className="error-icon">⚠️</span>
                 <span className="error-text">{analysisError}</span>
+              </div>
+            )}
+
+            {analysisComplete && (
+              <div className="success-message">
+                <span className="success-icon">✅</span>
+                <span className="success-text">Analysis completed successfully!</span>
+                <div className="report-content">
+                  <ReactMarkdown>{analysisComplete}</ReactMarkdown>
+                </div>
               </div>
             )}
           </div>
@@ -406,6 +435,16 @@ function App() {
               <div className="error-message">
                 <span className="error-icon">⚠️</span>
                 <span className="error-text">{simulationError}</span>
+              </div>
+            )}
+
+            {simulationComplete && (
+              <div className="success-message">
+                <span className="success-icon">✅</span>
+                <span className="success-text">Simulation completed successfully!</span>
+                <div className="report-content">
+                  <ReactMarkdown>{simulationComplete}</ReactMarkdown>
+                </div>
               </div>
             )}
           </div>
