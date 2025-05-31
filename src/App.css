@@ -677,4 +677,10 @@
     border-color: #4b5563;
     border-top-color: #60a5fa;
   }
+  
+  .analyze-button:disabled,
+  .simulate-button:disabled {
+    background: #404040;
+    color: #9ca3af;
+  }
 }
