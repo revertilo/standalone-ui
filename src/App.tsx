@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import './App.css'
 
@@ -28,7 +28,6 @@ function App() {
   const [activeTab, setActiveTab] = useState<'trace' | 'simulate'>('trace')
   const [txHash, setTxHash] = useState('0x68109266feca2865beca5c3a2c38465f0330e60407edb2fafef07407bb7585aa')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected')
   const [currentStage, setCurrentStage] = useState<string>('')
   const [analysisError, setAnalysisError] = useState<string>('')
   const [analysisComplete, setAnalysisComplete] = useState<string>('')
@@ -37,18 +36,66 @@ function App() {
   const [value, setValue] = useState<string>('0x0')
   const [bytecode, setBytecode] = useState<string>('0x12aa3caf0000000000000000000000005141b82f5ffda4c6fe1e372978f1c5427640a1900000000000000000000000004d4574f50dd8b9dbe623cf329dcc78d76935e610000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000000000005141b82f5ffda4c6fe1e372978f1c5427640a1900000000000000000000000004ac3dc4f8986d77d3d589daa074f040b701d752a00000000000000000000000000000000000000000000000000c6cec41267a9be00000000000000000000000000000000000000000000000000071a96e6fa30a80000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000001600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000018300000000000000000000000000000000016500014f0001050000c900004e00a0744c8c094d4574f50dd8b9dbe623cf329dcc78d76935e610382ffce2287252f930e1c8dc9328dac5bf282ba10000000000000000000000000000000000000000000000000001fcf299c8b7750c204d4574f50dd8b9dbe623cf329dcc78d76935e610055fb841cce69000fbaff2691ad39fa6e23826a16ae4071198002dc6c0055fb841cce69000fbaff2691ad39fa6e23826a100000000000000000000000000000000000000000000000000071a96e6fa30a84d4574f50dd8b9dbe623cf329dcc78d76935e6104101c02aaa39b223fe8d0a0e5c4f27ead9083c756cc200042e1a7d4d000000000000000000000000000000000000000000000000000000000000000000a0f2fa6b66eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee000000000000000000000000000000000000000000000000000752d5a195b8c30000000000000000000701124fca6fa3c0611111111254eeb25477b68fb85ed929f73a96058200000000000000000000000000000000000000000000000000000000009a635db5')
   const [isSimulating, setIsSimulating] = useState(false)
-  const [simulationConnectionStatus, setSimulationConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected')
   const [currentSimulationStage, setCurrentSimulationStage] = useState<string>('')
   const [simulationError, setSimulationError] = useState<string>('')
   const [simulationComplete, setSimulationComplete] = useState<string>('')
+  const [funnyMessageIndex, setFunnyMessageIndex] = useState(0)
   const wsRef = useRef<WebSocket | null>(null)
   const simulationWsRef = useRef<WebSocket | null>(null)
+  const funnyMessageIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  const funnyMessages = [
+    "Asking Sam Altman for advice...",
+    "Bribing block builders with coffee...",
+    "Teaching AI the difference between revert and require...",
+    "Convincing Vitalik to explain the transaction...",
+    "Reading Satoshi's original white paper...",
+    "Asking ChatGPT if it's smarter than GPT-4...",
+    "Summoning the spirit of Hal Finney...",
+    "Debugging smart contracts with rubber ducks...",
+    "Converting gas fees to pizza slices for better understanding...",
+    "Teaching the AI to count in wei...",
+    "Asking Stack Overflow for transaction help...",
+    "Consulting the Ethereum Yellow Paper (again)...",
+    "Deciphering what the smart contract author meant...",
+    "Explaining to AI why gas costs so much...",
+    "Teaching machine learning about human learning curves...",
+    "Converting transaction logs to haikus...",
+    "Asking Ethereum if it's feeling okay today...",
+    "Consulting the blockchain gods for wisdom..."
+  ]
+
+  // Effect to handle funny message rotation during AI analysis
+  useEffect(() => {
+    const isAIAnalyzing = (currentStage.toLowerCase().includes('ai')) || (currentSimulationStage.toLowerCase().includes('ai'))
+    
+    if (isAIAnalyzing) {
+      // Start the interval to rotate messages every 3 seconds (3,000 ms)
+      funnyMessageIntervalRef.current = setInterval(() => {
+        setFunnyMessageIndex(prevIndex => (prevIndex + 1) % funnyMessages.length)
+      }, 3000)
+    } else {
+      // Clear interval when not in AI analysis
+      if (funnyMessageIntervalRef.current) {
+        clearInterval(funnyMessageIntervalRef.current)
+        funnyMessageIntervalRef.current = null
+      }
+      // Reset to first message
+      setFunnyMessageIndex(0)
+    }
+
+    // Cleanup interval on unmount
+    return () => {
+      if (funnyMessageIntervalRef.current) {
+        clearInterval(funnyMessageIntervalRef.current)
+      }
+    }
+  }, [currentStage, currentSimulationStage, funnyMessages.length])
 
   const handleAnalyze = () => {
     if (!txHash.trim()) return
 
     setIsAnalyzing(true)
-    setConnectionStatus('connecting')
     setCurrentStage('')
     setAnalysisError('')
     setAnalysisComplete('')
@@ -59,7 +106,6 @@ function App() {
 
     ws.onopen = () => {
       console.log('WebSocket connected')
-      setConnectionStatus('connected')
       
       // Send the start message
       const message = {
@@ -95,7 +141,6 @@ function App() {
 
     ws.onclose = (event) => {
       console.log('WebSocket closed:', event.code, event.reason)
-      setConnectionStatus('disconnected')
       setIsAnalyzing(false)
       setCurrentStage('')
       wsRef.current = null
@@ -103,7 +148,6 @@ function App() {
 
     ws.onerror = (error) => {
       console.error('WebSocket error:', error)
-      setConnectionStatus('error')
       setIsAnalyzing(false)
       setAnalysisError('WebSocket connection failed')
     }
@@ -115,29 +159,10 @@ function App() {
     }
   }
 
-  const getStatusColor = () => {
-    switch (connectionStatus) {
-      case 'connected': return '#22c55e'
-      case 'connecting': return '#f59e0b'
-      case 'error': return '#ef4444'
-      default: return '#6b7280'
-    }
-  }
-
-  const getStatusText = () => {
-    switch (connectionStatus) {
-      case 'connected': return 'Connected'
-      case 'connecting': return 'Connecting...'
-      case 'error': return 'Connection Error'
-      default: return 'Disconnected'
-    }
-  }
-
   const handleSimulate = () => {
     if (!contractAddress.trim() || !fromAddress.trim() || !bytecode.trim()) return
 
     setIsSimulating(true)
-    setSimulationConnectionStatus('connecting')
     setCurrentSimulationStage('')
     setSimulationError('')
     setSimulationComplete('')
@@ -148,7 +173,6 @@ function App() {
 
     ws.onopen = () => {
       console.log('Simulation WebSocket connected')
-      setSimulationConnectionStatus('connected')
       
       // Send the emulate message
       const message = {
@@ -187,7 +211,6 @@ function App() {
 
     ws.onclose = (event) => {
       console.log('Simulation WebSocket closed:', event.code, event.reason)
-      setSimulationConnectionStatus('disconnected')
       setIsSimulating(false)
       setCurrentSimulationStage('')
       simulationWsRef.current = null
@@ -195,7 +218,6 @@ function App() {
 
     ws.onerror = (error) => {
       console.error('Simulation WebSocket error:', error)
-      setSimulationConnectionStatus('error')
       setIsSimulating(false)
       setSimulationError('WebSocket connection failed')
     }
@@ -204,24 +226,6 @@ function App() {
   const handleStopSimulation = () => {
     if (simulationWsRef.current) {
       simulationWsRef.current.close()
-    }
-  }
-
-  const getSimulationStatusColor = () => {
-    switch (simulationConnectionStatus) {
-      case 'connected': return '#22c55e'
-      case 'connecting': return '#f59e0b'
-      case 'error': return '#ef4444'
-      default: return '#6b7280'
-    }
-  }
-
-  const getSimulationStatusText = () => {
-    switch (simulationConnectionStatus) {
-      case 'connected': return 'Connected'
-      case 'connecting': return 'Connecting...'
-      case 'error': return 'Connection Error'
-      default: return 'Disconnected'
     }
   }
 
@@ -253,16 +257,6 @@ function App() {
         {activeTab === 'trace' && (
           <div className="trace-section">
             <h2>Transaction Tracer</h2>
-            
-            {connectionStatus !== 'disconnected' && (
-              <div className="status-indicator">
-                <span 
-                  className="status-dot" 
-                  style={{ backgroundColor: getStatusColor() }}
-                ></span>
-                <span className="status-text">{getStatusText()}</span>
-              </div>
-            )}
 
             <div className="input-group">
               <input
@@ -300,6 +294,11 @@ function App() {
                       <div className="loading-spinner"></div>
                       <span className="stage-text">{currentStage}</span>
                     </div>
+                    {currentStage.toLowerCase().includes('ai') && (
+                      <div className="stage-info">
+                        {funnyMessages[funnyMessageIndex]}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -328,32 +327,7 @@ function App() {
           <div className="simulate-section">
             <h2>Transaction Simulator</h2>
             
-            {simulationConnectionStatus !== 'disconnected' && (
-              <div className="status-indicator">
-                <span 
-                  className="status-dot" 
-                  style={{ backgroundColor: getSimulationStatusColor() }}
-                ></span>
-                <span className="status-text">{getSimulationStatusText()}</span>
-              </div>
-            )}
-            
             <div className="transaction-fields">
-              <div className="field-group">
-                <label htmlFor="contract-address" className="field-label">
-                  To Address:
-                </label>
-                <input
-                  id="contract-address"
-                  type="text"
-                  placeholder="0x..."
-                  value={contractAddress}
-                  onChange={(e) => setContractAddress(e.target.value)}
-                  className="address-input"
-                  disabled={isSimulating}
-                />
-              </div>
-
               <div className="field-group">
                 <label htmlFor="from-address" className="field-label">
                   From Address:
@@ -364,6 +338,21 @@ function App() {
                   placeholder="0x..."
                   value={fromAddress}
                   onChange={(e) => setFromAddress(e.target.value)}
+                  className="address-input"
+                  disabled={isSimulating}
+                />
+              </div>
+
+              <div className="field-group">
+                <label htmlFor="contract-address" className="field-label">
+                  To Address:
+                </label>
+                <input
+                  id="contract-address"
+                  type="text"
+                  placeholder="0x..."
+                  value={contractAddress}
+                  onChange={(e) => setContractAddress(e.target.value)}
                   className="address-input"
                   disabled={isSimulating}
                 />
@@ -386,7 +375,7 @@ function App() {
 
               <div className="field-group">
                 <label htmlFor="bytecode" className="field-label">
-                  Bytecode:
+                  Calldata:
                 </label>
                 <textarea
                   id="bytecode"
@@ -426,6 +415,11 @@ function App() {
                       <div className="loading-spinner"></div>
                       <span className="stage-text">{currentSimulationStage}</span>
                     </div>
+                    {currentSimulationStage.toLowerCase().includes('ai') && (
+                      <div className="stage-info">
+                        {funnyMessages[funnyMessageIndex]}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

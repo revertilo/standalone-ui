@@ -276,6 +276,13 @@
   color: #1e40af;
 }
 
+.stage-info {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 0.5rem;
+  font-style: italic;
+}
+
 /* Error Message */
 .error-message {
   margin-top: 1rem;
@@ -631,6 +638,11 @@
     border-color: #333;
   }
   
+  .trace-section h2,
+  .simulate-section h2 {
+    color: #f9fafb;
+  }
+  
   .tx-input {
     background: #2a2a2a;
     border-color: #444;
@@ -640,5 +652,29 @@
   .tx-input:focus {
     background: #1a1a1a;
     border-color: #646cff;
+  }
+  
+  .tx-input:disabled {
+    background: #1a1a1a;
+    border-color: #333;
+    color: #6b7280;
+  }
+  
+  .stage-info {
+    color: #9ca3af;
+  }
+  
+  .current-stage {
+    background: #2a2a2a;
+    border-color: #404040;
+  }
+  
+  .stage-text {
+    color: #60a5fa;
+  }
+  
+  .loading-spinner {
+    border-color: #4b5563;
+    border-top-color: #60a5fa;
   }
 }
